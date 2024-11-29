@@ -10,6 +10,9 @@ export default function Game() {
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [gameOver, setGameOver] = useState(false);
   const [blockTimers, setBlockTimers] = useState<Record<string, number>>({});
+  const [activeAnimations, setActiveAnimations] = useState<Record<string, string>>({});
+  const [swipePosition, setSwipePosition] = useState<Record<string, { x: number, y: number }>>({});
+  const [animatingBlocks, setAnimatingBlocks] = useState<Set<string>>(new Set());
 
   // Add this function at the top of your component to calculate block width
   const getBlockDimensions = () => {
@@ -201,15 +204,16 @@ export default function Game() {
     if (block.action === action) {
       setScore(prev => prev + 10);
       
-      // Remove block and check if it was the last one
-      setBlocks(prev => {
-        const newBlocks = prev.filter(b => b.id !== block.id);
-        // If this was the last block, reset the timer
-        if (newBlocks.length === 0) {
-          setTimer(6);
-        }
-        return newBlocks;
-      });
+      // Wait for animation to complete before removing block
+      setTimeout(() => {
+        setBlocks(prev => {
+          const newBlocks = prev.filter(b => b.id !== block.id);
+          if (newBlocks.length === 0) {
+            setTimer(6);
+          }
+          return newBlocks;
+        });
+      }, 500); // Updated to match new animation duration
     }
   };
 
@@ -217,6 +221,9 @@ export default function Game() {
   const handleGesture = (block: Block, event: any, movement: [number, number]) => {
     if (!block.action.includes('SWIPE')) return;
     
+    // Don't handle new gestures if block is being animated
+    if (animatingBlocks.has(block.id)) return;
+
     const [x, y] = movement;
     const totalDistance = Math.sqrt(x * x + y * y);
     if (totalDistance < 20) return;
@@ -227,8 +234,74 @@ export default function Game() {
     } else {
       action = y > 0 ? BlockAction.SWIPE_DOWN : BlockAction.SWIPE_UP;
     }
-    
-    handleBlockAction(block, action);
+
+    const isCorrectSwipe = action === block.action;
+
+    // Mark block as animating
+    setAnimatingBlocks(prev => new Set(prev).add(block.id));
+
+    if (isCorrectSwipe) {
+      const successAnimations: Record<BlockAction, string> = {
+        [BlockAction.SWIPE_RIGHT]: styles.swipeRightSuccess,
+        [BlockAction.SWIPE_LEFT]: styles.swipeLeftSuccess,
+        [BlockAction.SWIPE_UP]: styles.swipeUpSuccess,
+        [BlockAction.SWIPE_DOWN]: styles.swipeDownSuccess,
+        [BlockAction.TAP]: '',
+        [BlockAction.DOUBLE_TAP]: '',
+        [BlockAction.AVOID]: ''
+      };
+      setActiveAnimations(prev => ({ ...prev, [block.id]: successAnimations[action] }));
+      handleBlockAction(block, action);
+      
+      // Remove from animating after success animation
+      setTimeout(() => {
+        setAnimatingBlocks(prev => {
+          const next = new Set(prev);
+          next.delete(block.id);
+          return next;
+        });
+      }, 500);
+    } else {
+      setActiveAnimations(prev => ({ ...prev, [block.id]: styles.swipeFail }));
+      
+      // Remove from animating after bounce animation
+      setTimeout(() => {
+        setActiveAnimations(prev => {
+          const newAnimations = { ...prev };
+          delete newAnimations[block.id];
+          return newAnimations;
+        });
+        setAnimatingBlocks(prev => {
+          const next = new Set(prev);
+          next.delete(block.id);
+          return next;
+        });
+      }, 500);
+    }
+  };
+
+  // Update click handlers
+  const onTap = (block: Block) => {
+    if (block.action === BlockAction.TAP) {
+      setActiveAnimations(prev => ({ ...prev, [block.id]: styles.tapping }));
+      setTimeout(() => {
+        setActiveAnimations(prev => ({ ...prev, [block.id]: styles.success }));
+        handleBlockAction(block, BlockAction.TAP);
+      }, 200);
+    } else if (block.action === BlockAction.AVOID) {
+      handleBlockAction(block, BlockAction.AVOID);
+    }
+  };
+
+  // Add double tap handler
+  const onDoubleTap = (block: Block) => {
+    if (block.action === BlockAction.DOUBLE_TAP) {
+      setActiveAnimations(prev => ({ ...prev, [block.id]: styles.tapping }));
+      setTimeout(() => {
+        setActiveAnimations(prev => ({ ...prev, [block.id]: styles.success }));
+        handleBlockAction(block, BlockAction.DOUBLE_TAP);
+      }, 200);
+    }
   };
 
   if (gameOver) {
@@ -267,9 +340,7 @@ export default function Game() {
         {blocks.map((block) => (
           <div
             key={block.id}
-            draggable={block.action.includes('SWIPE')}
-            data-block-id={block.id}
-            className={`${styles.block} ${blockTimers[block.id] <= 1 ? styles.shake : ''}`}
+            className={`${styles.block} ${blockTimers[block.id] <= 1 ? styles.shake : ''} ${activeAnimations[block.id] || ''}`}
             style={{
               backgroundColor: block.color,
               left: block.position.x,
@@ -284,35 +355,28 @@ export default function Game() {
               touchAction: 'none',
               opacity: block.action === BlockAction.AVOID ? 
                 Math.min(blockTimers[block.id] / 2.5, 1) : 
-                Math.min(blockTimers[block.id] / 6, 1)
+                Math.min(blockTimers[block.id] / 6, 1),
+              transform: block.action.includes('SWIPE') && swipePosition[block.id] 
+                ? `translate(${swipePosition[block.id].x}px, ${swipePosition[block.id].y}px)` 
+                : 'none'
             }}
-            onDragStart={(e) => {
-              e.dataTransfer.setDragImage(new Image(), 0, 0);
-              const rect = e.currentTarget.getBoundingClientRect();
-              e.currentTarget.dataset.startX = e.clientX.toString();
-              e.currentTarget.dataset.startY = e.clientY.toString();
+            onMouseDown={(e) => {
+              const startX = e.clientX;
+              const startY = e.clientY;
+              
+              const handleMouseUp = (e: MouseEvent) => {
+                const movement: [number, number] = [
+                  e.clientX - startX,
+                  e.clientY - startY
+                ];
+                handleGesture(block, e, movement);
+                window.removeEventListener('mouseup', handleMouseUp);
+              };
+              
+              window.addEventListener('mouseup', handleMouseUp);
             }}
-            onDragEnd={(e) => {
-              const startX = Number(e.currentTarget.dataset.startX || 0);
-              const startY = Number(e.currentTarget.dataset.startY || 0);
-              const movement: [number, number] = [
-                e.clientX - startX,
-                e.clientY - startY
-              ];
-              handleGesture(block, e, movement);
-            }}
-            onClick={(e) => {
-              if (block.action === BlockAction.TAP) {
-                handleBlockAction(block, BlockAction.TAP);
-              } else if (block.action === BlockAction.AVOID) {
-                handleBlockAction(block, BlockAction.AVOID);
-              }
-            }}
-            onDoubleClick={(e) => {
-              if (block.action === BlockAction.DOUBLE_TAP) {
-                handleBlockAction(block, BlockAction.DOUBLE_TAP);
-              }
-            }}
+            onClick={() => onTap(block)}
+            onDoubleClick={() => onDoubleTap(block)}
           >
             {block.icon}
           </div>
