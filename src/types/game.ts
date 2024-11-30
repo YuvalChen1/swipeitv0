@@ -5,14 +5,16 @@ export enum BlockAction {
     SWIPE_DOWN = 'SWIPE_DOWN',
     TAP = 'TAP',
     DOUBLE_TAP = 'DOUBLE_TAP',
-    AVOID = 'AVOID'
+    AVOID = 'AVOID',
+    EXTRA_LIFE = 'EXTRA_LIFE',
+    COINS = 'COINS'
   }
   
   export interface Block {
     id: string;
     action: BlockAction;
     color: string;
-    icon: string;
+    icon: React.ReactNode;
     position: {
       x: number;
       y: number;

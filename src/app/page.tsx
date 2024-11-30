@@ -3,10 +3,23 @@
 import { useState, useEffect } from 'react';
 import { Block, BlockAction } from '@/types/game';
 import styles from './page.module.css';
+import {
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  ArrowDown,
+  Circle,
+  CircleDot,
+  X,
+  Heart,
+  CircleDollarSign,
+  Trophy,
+  Clock,
+} from "lucide-react";
 
 export default function Game() {
   const [score, setScore] = useState(0);
-  const [timer, setTimer] = useState(6);
+  const [timer, setTimer] = useState(6.0);
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [gameOver, setGameOver] = useState(false);
   const [blockTimers, setBlockTimers] = useState<Record<string, number>>({});
@@ -22,6 +35,7 @@ export default function Game() {
   });
   const [tutorialStep, setTutorialStep] = useState(0);
   const [lastTapTime, setLastTapTime] = useState(0);
+  const [lives, setLives] = useState(0);
 
   // Add this function at the top of your component to calculate block width
   const getBlockDimensions = () => {
@@ -48,8 +62,8 @@ export default function Game() {
     if (windowHeight < 600) {
       return {
         width: windowWidth * 0.9,
-        height: Math.min(availableHeight * 0.09, 70), // 9% of available height
-        gap: 8, // Smaller gap for very small screens
+        height: Math.min(availableHeight * 0.11, 75),
+        gap: 5,
         headerHeight
       };
     }
@@ -57,43 +71,57 @@ export default function Game() {
     else if (windowWidth < 768) {
       return {
         width: windowWidth * 0.9,
-        height: Math.min(availableHeight * 0.095, 70),
-        gap: 15,
+        height: Math.min(availableHeight * 0.115, 75),
+        gap: 8,
         headerHeight
       };
     }
     // For larger screens
     return {
       width: windowWidth * 0.4,
-      height: Math.min(availableHeight * 0.1, 70),
-      gap: 20,
+      height: Math.min(availableHeight * 0.12, 75),
+      gap: 12,
       headerHeight
     };
   };
 
-  // Add back the colors object
+  // Update colors object
   const colors = {
     [BlockAction.SWIPE_LEFT]: '#FF6B6B',
     [BlockAction.SWIPE_RIGHT]: '#4ECDC4',
     [BlockAction.SWIPE_UP]: '#45B7D1',
     [BlockAction.SWIPE_DOWN]: '#96CEB4',
-    [BlockAction.TAP]: '#FFEEAD',
-    [BlockAction.DOUBLE_TAP]: '#FFD93D',
+    [BlockAction.TAP]: '#FFBE0B',
+    [BlockAction.DOUBLE_TAP]: '#FF006E',
     [BlockAction.AVOID]: '#000000',
+    [BlockAction.EXTRA_LIFE]: '#ff0000',
+    [BlockAction.COINS]: '#22d65e',
   };
 
-  // Simple icon getter
-  const getIconForAction = (action: BlockAction): string => {
-    const icons = {
-      [BlockAction.SWIPE_LEFT]: '←',
-      [BlockAction.SWIPE_RIGHT]: '→',
-      [BlockAction.SWIPE_UP]: '↑',
-      [BlockAction.SWIPE_DOWN]: '↓',
-      [BlockAction.TAP]: '●',
-      [BlockAction.DOUBLE_TAP]: '◎',
-      [BlockAction.AVOID]: '✕',
-    };
-    return icons[action];
+  // Update icon getter to use Lucide icons
+  const getIconForAction = (action: BlockAction) => {
+    const iconProps = { size: 32, color: 'white' };
+    
+    switch (action) {
+      case BlockAction.SWIPE_LEFT:
+        return <ArrowLeft {...iconProps} />;
+      case BlockAction.SWIPE_RIGHT:
+        return <ArrowRight {...iconProps} />;
+      case BlockAction.SWIPE_UP:
+        return <ArrowUp {...iconProps} />;
+      case BlockAction.SWIPE_DOWN:
+        return <ArrowDown {...iconProps} />;
+      case BlockAction.TAP:
+        return <Circle {...iconProps} />;
+      case BlockAction.DOUBLE_TAP:
+        return <CircleDot {...iconProps} />;
+      case BlockAction.AVOID:
+        return <X {...iconProps} />;
+      case BlockAction.EXTRA_LIFE:
+        return <Heart {...iconProps} />;
+      case BlockAction.COINS:
+        return <CircleDollarSign {...iconProps} />;
+    }
   };
 
   // Timer effect - main game timer
@@ -106,9 +134,9 @@ export default function Game() {
           setGameOver(true);
           return 0;
         }
-        return prev - 1;
+        return Math.round((prev - 0.1) * 10) / 10; // Round to 1 decimal place
       });
-    }, 1000);
+    }, 100); // Update every 100ms instead of 1000ms
 
     return () => clearInterval(interval);
   }, [gameOver, isTutorialComplete]);
@@ -187,13 +215,13 @@ export default function Game() {
   }, [gameOver, blocks]);
 
   const getBlockCount = (score: number) => {
-    if (score >= 1000) return 9;
-    if (score >= 750) return 7;
-    if (score >= 600) return 6;
-    if (score >= 500) return 5;
-    if (score >= 400) return 4;
-    if (score >= 250) return 3;
-    if (score >= 100) return 2;
+    if (score >= 100) return 9;
+    if (score >= 75) return 7;
+    if (score >= 60) return 6;
+    if (score >= 50) return 5;
+    if (score >= 40) return 4;
+    if (score >= 25) return 3;
+    if (score >= 10) return 2;
     return 1;
   };
 
@@ -301,11 +329,83 @@ export default function Game() {
   // Update handleBlockAction
   const handleBlockAction = (block: Block, action: BlockAction) => {
     if (block.action === BlockAction.AVOID) {
-      setGameOver(true);
+      // Add overlay to freeze game appearance
+      const overlay = document.createElement('div');
+      overlay.className = styles.gameFreeze;
+      document.body.appendChild(overlay);
+
+      // Add shatter effect with more shards
+      const blockElement = document.querySelector(`[data-block-id="${block.id}"]`);
+      if (blockElement) {
+        // First, clone the current background color and icon color
+        const currentColor = window.getComputedStyle(blockElement).backgroundColor;
+        
+        // Create a container for shatter pieces
+        const shatterContainer = document.createElement('div');
+        shatterContainer.className = styles.avoidShatter;
+        shatterContainer.style.position = 'absolute';
+        shatterContainer.style.inset = '0';
+        shatterContainer.style.backgroundColor = currentColor;
+        
+        // Add shatter pieces to the container
+        shatterContainer.innerHTML = '<span></span>'.repeat(6);
+        
+        // Apply the color to shatter pieces
+        const shatterPieces = shatterContainer.querySelectorAll('span');
+        shatterPieces.forEach(piece => {
+          (piece as HTMLElement).style.backgroundColor = currentColor;
+        });
+
+        // Add the shatter container to the block
+        blockElement.appendChild(shatterContainer);
+        
+        // Hide original content after a tiny delay to allow shatter animation to start
+        setTimeout(() => {
+          (blockElement as HTMLElement).style.backgroundColor = 'transparent';
+          const icon = blockElement.querySelector('svg');
+          if (icon) icon.style.opacity = '0';
+        }, 50);
+      }
+      
+      setActiveAnimations(prev => ({ ...prev, [block.id]: styles.avoidShatter }));
+      
+      // Make all blocks non-interactable
+      const allBlocks = document.querySelectorAll(`.${styles.block}`);
+      allBlocks.forEach(block => {
+        (block as HTMLElement).style.pointerEvents = 'none';
+      });
+
+      // Store current timer value
+      const currentTimer = timer;
+      
+      // Freeze timer updates
+      const timerInterval = setInterval(() => {
+        setTimer(currentTimer);
+      }, 100);
+
+      // Delay game over and remove overlay
+      setTimeout(() => {
+        clearInterval(timerInterval);
+        document.body.removeChild(overlay);
+        setGameOver(true);
+      }, 2000);
       return;
     }
 
-    if (block.action === action) {
+    if (block.action === action || 
+        block.action === BlockAction.EXTRA_LIFE || 
+        block.action === BlockAction.COINS) {
+      
+      // Handle special blocks
+      if (block.action === BlockAction.COINS) {
+        console.log('Coins block clicked!');
+        setActiveAnimations(prev => ({ ...prev, [block.id]: styles.coinShatter }));
+      } else if (block.action === BlockAction.EXTRA_LIFE) {
+        console.log('Heart block clicked!');
+        setActiveAnimations(prev => ({ ...prev, [block.id]: styles.heartShatter }));
+        setLives(prev => prev + 1);
+      }
+
       if (!isTutorialComplete) {
         if (tutorialStep < 2) {
           setTutorialStep(prev => prev + 1);
@@ -357,7 +457,9 @@ export default function Game() {
         [BlockAction.SWIPE_DOWN]: styles.swipeDownSuccess,
         [BlockAction.TAP]: '',
         [BlockAction.DOUBLE_TAP]: '',
-        [BlockAction.AVOID]: ''
+        [BlockAction.AVOID]: '',
+        [BlockAction.EXTRA_LIFE]: '',
+        [BlockAction.COINS]: ''
       };
       setActiveAnimations(prev => ({ ...prev, [block.id]: successAnimations[action] }));
       handleBlockAction(block, action);
@@ -391,7 +493,9 @@ export default function Game() {
 
   // Update click handlers
   const onTap = (block: Block) => {
-    if (block.action === BlockAction.TAP) {
+    if (block.action === BlockAction.TAP || 
+        block.action === BlockAction.EXTRA_LIFE || 
+        block.action === BlockAction.COINS) {
       setActiveAnimations(prev => ({ ...prev, [block.id]: styles.tapping }));
       setTimeout(() => {
         setActiveAnimations(prev => ({ ...prev, [block.id]: styles.success }));
@@ -413,7 +517,7 @@ export default function Game() {
     }
   };
 
-  // Add touch event handlers
+  // Update handleTouchStart to reset lastTapTime when touching different blocks
   const handleTouchStart = (e: React.TouchEvent, block: Block) => {
     const touch = e.touches[0];
     const startX = touch.clientX;
@@ -430,14 +534,18 @@ export default function Game() {
       const currentTime = new Date().getTime();
       const tapLength = currentTime - lastTapTime;
       
-      if (tapLength < 300 && totalMovement < 10) {
+      if (tapLength < 300 && totalMovement < 10 && block.action === BlockAction.DOUBLE_TAP) {
         // Double tap detected
         onDoubleTap(block);
         setLastTapTime(0); // Reset after double tap
       } else if (totalMovement < 10) {
         // Single tap detected
         onTap(block);
-        setLastTapTime(currentTime);
+        if (block.action === BlockAction.DOUBLE_TAP) {
+          setLastTapTime(currentTime);
+        } else {
+          setLastTapTime(0); // Reset for non-double-tap blocks
+        }
       } else {
         // Swipe detected
         handleGesture(block, e, movement);
@@ -475,26 +583,32 @@ export default function Game() {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        minHeight: '50px',
-        padding: typeof window !== 'undefined' && window.innerHeight < 600 ? '0.75rem' : '1rem',
+        padding: '0.75rem',
         height: `${getBlockDimensions().headerHeight}px`,
-        backgroundColor: '#000000',
+        backgroundColor: 'rgb(17, 24, 39)', // bg-gray-900
+        backdropFilter: 'blur(8px)',
         color: 'white',
         zIndex: 1000
       }}>
-        <div className={styles.score} style={{ 
-          color: 'white', 
-          fontWeight: 'bold', 
-          fontSize: typeof window !== 'undefined' && window.innerHeight < 600 ? '1rem' : '1.2rem' 
-        }}>
-          Score: {score}
+        <div className={styles.scoreContainer}>
+          <Trophy size={24} color="#FCD34D" /> {/* text-yellow-300 */}
+          <span className={styles.score}>
+            {score}
+          </span>
         </div>
-        <div className={styles.timer} style={{ 
-          color: 'white', 
-          fontWeight: 'bold', 
-          fontSize: typeof window !== 'undefined' && window.innerHeight < 600 ? '1rem' : '1.2rem' 
-        }}>
-          Time: {timer}s
+
+        <div className={styles.livesContainer}>
+          <Heart size={24} color="#EF4444" fill="#EF4444" />
+          <span className={styles.lives}>
+            {lives}
+          </span>
+        </div>
+
+        <div className={styles.timerContainer}>
+          <Clock size={24} color="#86EFAC" />
+          <span className={styles.timer}>
+            {timer.toFixed(1)}s
+          </span>
         </div>
       </header>
       
@@ -510,8 +624,9 @@ export default function Game() {
         {blocks.map((block) => (
           <div
             key={block.id}
+            data-block-id={block.id}
             className={`${styles.block} ${activeAnimations[block.id] || ''} ${
-              !block.isTutorial && blockTimers[block.id] <= 1 ? styles.shake : ''
+              !block.isTutorial && blockTimers[block.id] <= 1.5 ? styles.shake : ''
             }`}
             style={{
               backgroundColor: block.color,
@@ -529,10 +644,13 @@ export default function Game() {
               opacity: !block.isTutorial ? 
                 (!activeAnimations[block.id] ? 
                   (block.action === BlockAction.AVOID ? 
-                    Math.min(blockTimers[block.id] / 2.5, 1) : 
-                    Math.min(blockTimers[block.id] / 6, 1))
+                    blockTimers[block.id] <= 1.5 ? // Start fade at 1.5 seconds for avoid blocks
+                      blockTimers[block.id] / 1.5 : 1 : 
+                    blockTimers[block.id] <= 1.5 ? // Start fade at 1.5 seconds for regular blocks
+                      blockTimers[block.id] / 1.5 : 1)
                   : 1)
-                : 1
+                : 1,
+              fontSize: undefined, // Remove font-size as we're using SVG icons now
             }}
             onMouseDown={(e) => {
               const startX = e.clientX;
@@ -553,7 +671,7 @@ export default function Game() {
             onClick={() => onTap(block)}
             onDoubleClick={() => onDoubleTap(block)}
           >
-            {block.icon}
+            {getIconForAction(block.action)}
             {block.isTutorial && (
               <div className={styles.tutorialText}>
                 {block.tutorialText}

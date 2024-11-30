@@ -49,14 +49,14 @@
   }
   
   .shake {
-    animation: shake 0.5s infinite;
+    animation: shake 0.3s infinite;
     animation-play-state: running;
   }
   
   @keyframes shake {
     0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-5px); }
-    75% { transform: translateX(5px); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
   }
   
   .gameOver {
@@ -197,4 +197,292 @@
       1px -1px 0 #fff,
       -1px 1px 0 #fff,
       1px 1px 0 #fff;
+  }
+  
+  .shatterAvoid {
+    animation: shatterAvoid 0.5s ease-out forwards;
+  }
+  
+  .shatterCoins {
+    animation: shatterCoins 0.5s ease-out forwards;
+  }
+  
+  .shatterHeart {
+    animation: shatterHeart 0.5s ease-out forwards;
+  }
+  
+  @keyframes shatterAvoid {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.8; }
+    100% { transform: scale(0); opacity: 0; }
+  }
+  
+  @keyframes shatterCoins {
+    0% { transform: scale(1) rotate(0); opacity: 1; }
+    100% { transform: scale(0) rotate(360deg); opacity: 0; }
+  }
+  
+  @keyframes shatterHeart {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.8; }
+    100% { transform: scale(0); opacity: 0; }
+  }
+  
+  .avoidParticles {
+    position: relative;
+  }
+  
+  .avoidParticles::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    animation: avoidShatter 2s ease-out forwards;
+  }
+  
+  .coinParticles {
+    position: relative;
+  }
+  
+  .coinParticles::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    animation: coinCollect 0.5s ease-out forwards;
+  }
+  
+  .heartParticles {
+    position: relative;
+  }
+  
+  .heartParticles::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    animation: heartCollect 0.5s ease-out forwards;
+  }
+  
+  @keyframes avoidShatter {
+    0% { 
+      clip-path: polygon(50% 50%, 50% 50%, 50% 50%);
+      background: currentColor;
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% { 
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+      transform: scale(1.2);
+      opacity: 0.8;
+    }
+    100% { 
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+      transform: scale(0);
+      opacity: 0;
+    }
+  }
+  
+  @keyframes coinCollect {
+    0% { transform: scale(1) rotate(0deg); opacity: 1; }
+    50% { transform: scale(1.3) rotate(180deg); opacity: 0.8; }
+    100% { transform: scale(0) rotate(360deg); opacity: 0; }
+  }
+  
+  @keyframes heartCollect {
+    0% { transform: scale(1); opacity: 1; }
+    50% { 
+      transform: scale(1.3) translateY(-20px);
+      opacity: 0.8;
+    }
+    100% { 
+      transform: scale(0) translateY(-40px);
+      opacity: 0;
+    }
+  }
+  
+  .gameFreeze {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 100;
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+  
+  .avoidShatter {
+    position: relative;
+    overflow: visible;
+  }
+  
+  .avoidShatter::before,
+  .avoidShatter::after,
+  .avoidShatter span {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: currentColor;
+    opacity: 1;
+  }
+  
+  /* Create 8 shards with different clip paths */
+  .avoidShatter::before {
+    clip-path: polygon(0 0, 50% 0, 25% 25%);
+    animation: shatterTopLeft 0.5s ease-out forwards;
+  }
+  
+  .avoidShatter::after {
+    clip-path: polygon(50% 0, 100% 0, 75% 25%);
+    animation: shatterTopRight 0.5s ease-out forwards;
+  }
+  
+  .avoidShatter span:nth-child(1) {
+    clip-path: polygon(0 0, 25% 25%, 0 50%);
+    animation: shatterLeft 0.5s ease-out forwards;
+  }
+  
+  .avoidShatter span:nth-child(2) {
+    clip-path: polygon(100% 0, 75% 25%, 100% 50%);
+    animation: shatterRight 0.5s ease-out forwards;
+  }
+  
+  .avoidShatter span:nth-child(3) {
+    clip-path: polygon(0 50%, 25% 75%, 0 100%);
+    animation: shatterBottomLeft 0.5s ease-out forwards;
+  }
+  
+  .avoidShatter span:nth-child(4) {
+    clip-path: polygon(100% 50%, 75% 75%, 100% 100%);
+    animation: shatterBottomRight 0.5s ease-out forwards;
+  }
+  
+  .avoidShatter span:nth-child(5) {
+    clip-path: polygon(0 100%, 50% 100%, 25% 75%);
+    animation: shatterBottom1 0.5s ease-out forwards;
+  }
+  
+  .avoidShatter span:nth-child(6) {
+    clip-path: polygon(50% 100%, 100% 100%, 75% 75%);
+    animation: shatterBottom2 0.5s ease-out forwards;
+  }
+  
+  @keyframes shatterTopLeft {
+    0% { transform: translate(0, 0) rotate(0); opacity: 1; }
+    100% { transform: translate(-60px, -60px) rotate(-45deg); opacity: 0; }
+  }
+  
+  @keyframes shatterTopRight {
+    0% { transform: translate(0, 0) rotate(0); opacity: 1; }
+    100% { transform: translate(60px, -60px) rotate(45deg); opacity: 0; }
+  }
+  
+  @keyframes shatterLeft {
+    0% { transform: translate(0, 0) rotate(0); opacity: 1; }
+    100% { transform: translate(-70px, 0) rotate(-30deg); opacity: 0; }
+  }
+  
+  @keyframes shatterRight {
+    0% { transform: translate(0, 0) rotate(0); opacity: 1; }
+    100% { transform: translate(70px, 0) rotate(30deg); opacity: 0; }
+  }
+  
+  @keyframes shatterBottomLeft {
+    0% { transform: translate(0, 0) rotate(0); opacity: 1; }
+    100% { transform: translate(-60px, 60px) rotate(45deg); opacity: 0; }
+  }
+  
+  @keyframes shatterBottomRight {
+    0% { transform: translate(0, 0) rotate(0); opacity: 1; }
+    100% { transform: translate(60px, 60px) rotate(-45deg); opacity: 0; }
+  }
+  
+  @keyframes shatterBottom1 {
+    0% { transform: translate(0, 0) rotate(0); opacity: 1; }
+    100% { transform: translate(-30px, 70px) rotate(-15deg); opacity: 0; }
+  }
+  
+  @keyframes shatterBottom2 {
+    0% { transform: translate(0, 0) rotate(0); opacity: 1; }
+    100% { transform: translate(30px, 70px) rotate(15deg); opacity: 0; }
+  }
+  
+  .coinShatter {
+    position: relative;
+  }
+  
+  .coinShatter::before {
+    content: '💰';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2em;
+    animation: coinFloat 0.4s ease-out forwards;
+  }
+  
+  .heartShatter {
+    position: relative;
+  }
+  
+  .heartShatter::before {
+    content: '❤️';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2em;
+    animation: heartFloat 0.4s ease-out forwards;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes shatterPiece {
+    0% { 
+      clip-path: polygon(50% 50%, 50% 50%, 50% 50%);
+      transform: rotate(0deg) scale(1);
+      opacity: 1;
+    }
+    30% { 
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 0% 100%);
+      transform: rotate(45deg) scale(1.2);
+      opacity: 0.8;
+    }
+    100% { 
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 0% 100%);
+      transform: rotate(90deg) scale(0);
+      opacity: 0;
+    }
+  }
+  
+  @keyframes coinFloat {
+    0% { transform: scale(1) translateY(0); opacity: 1; }
+    40% { transform: scale(1.5) translateY(-20px); opacity: 0.8; }
+    100% { transform: scale(0) translateY(-40px); opacity: 0; }
+  }
+  
+  @keyframes heartFloat {
+    0% { transform: scale(1) translateY(0); opacity: 1; }
+    40% { transform: scale(1.5) translateY(-20px); opacity: 0.8; }
+    100% { transform: scale(0) translateY(-40px); opacity: 0; }
+  }
+  
+  .scoreContainer,
+  .livesContainer,
+  .timerContainer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    height: 100%;
+  }
+  
+  .score,
+  .lives,
+  .timer {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: white;
   }
