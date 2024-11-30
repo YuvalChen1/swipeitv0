@@ -18,4 +18,6 @@ export enum BlockAction {
       y: number;
     };
     originalIndex: number;
+    isTutorial?: boolean;
+    tutorialText?: string;
   }

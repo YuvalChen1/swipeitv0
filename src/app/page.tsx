@@ -14,6 +14,14 @@ export default function Game() {
   // const [swipePosition, setSwipePosition] = useState<Record<string, { x: number, y: number }>>({});
   const [animatingBlocks, setAnimatingBlocks] = useState<Set<string>>(new Set());
   const [bonusNotification, setBonusNotification] = useState<{ points: number, visible: boolean }>({ points: 0, visible: false });
+  const [isTutorialComplete, setIsTutorialComplete] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('tutorialComplete') === 'true';
+    }
+    return false;
+  });
+  const [tutorialStep, setTutorialStep] = useState(0);
+  const [lastTapTime, setLastTapTime] = useState(0);
 
   // Add this function at the top of your component to calculate block width
   const getBlockDimensions = () => {
@@ -59,8 +67,7 @@ export default function Game() {
 
   // Timer effect - main game timer
   useEffect(() => {
-    // Don't run timer during tutorial or game over
-    if (gameOver) return;
+    if (gameOver || !isTutorialComplete) return;
     
     const interval = setInterval(() => {
       setTimer((prev) => {
@@ -73,7 +80,7 @@ export default function Game() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [gameOver]);
+  }, [gameOver, isTutorialComplete]);
 
   // Remove bonus logic from handleBlockClear
   const handleBlockClear = (blockId: string) => {
@@ -101,11 +108,11 @@ export default function Game() {
   // Update the bonus calculation
   const calculateTimeBonus = (remainingTime: number, totalBlockCount: number) => {
     // Only give time bonus for 9 or more blocks
-    if (totalBlockCount < 2) return 0;
+    if (totalBlockCount < 9) return 0;
 
-    if (remainingTime >= 4) return 50;
-    if (remainingTime >= 3) return 30;
-    if (remainingTime >= 2) return 10;
+    if (remainingTime >= 3.5) return 50;
+    if (remainingTime >= 2.5) return 30;
+    if (remainingTime >= 1.5) return 10;
     return 0;
   };
 
@@ -121,7 +128,7 @@ export default function Game() {
     }
   };
 
-  // Update block timers effect
+  // Update block timers effect to ignore tutorial blocks
   useEffect(() => {
     if (gameOver) return;
     
@@ -129,8 +136,11 @@ export default function Game() {
       setBlockTimers(prev => {
         const newTimers = { ...prev };
         blocks.forEach(block => {
+          // Skip timer for tutorial blocks
+          if (block.isTutorial) return;
+
           if (!(block.id in newTimers)) {
-            newTimers[block.id] = block.action === BlockAction.AVOID ? 1.5 : 6;
+            newTimers[block.id] = block.action === BlockAction.AVOID ? 2.5 : 6;
           } else {
             newTimers[block.id] -= 0.1;
             if (newTimers[block.id] <= 0) {
@@ -188,9 +198,56 @@ export default function Game() {
     return positions;
   };
 
+  // Add tutorial blocks generator
+  const getTutorialBlocks = (): Block[] => {
+    const { width: blockWidth, height: blockHeight } = getBlockDimensions();
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    const centerX = (windowWidth - blockWidth) / 2;
+    const centerY = (windowHeight - blockHeight) / 2;
+
+    return [
+      {
+        id: 'tutorial-1',
+        action: BlockAction.TAP,
+        color: colors[BlockAction.TAP],
+        icon: getIconForAction(BlockAction.TAP),
+        position: { x: centerX, y: centerY },
+        originalIndex: 0,
+        isTutorial: true,
+        tutorialText: 'Tap'
+      },
+      {
+        id: 'tutorial-2',
+        action: BlockAction.DOUBLE_TAP,
+        color: colors[BlockAction.DOUBLE_TAP],
+        icon: getIconForAction(BlockAction.DOUBLE_TAP),
+        position: { x: centerX, y: centerY },
+        originalIndex: 0,
+        isTutorial: true,
+        tutorialText: 'Double Tap'
+      },
+      {
+        id: 'tutorial-3',
+        action: BlockAction.SWIPE_LEFT,
+        color: colors[BlockAction.SWIPE_LEFT],
+        icon: getIconForAction(BlockAction.SWIPE_LEFT),
+        position: { x: centerX, y: centerY },
+        originalIndex: 0,
+        isTutorial: true,
+        tutorialText: 'Swipe Left'
+      }
+    ];
+  };
+
   // Update block spawning effect
   useEffect(() => {
     if (gameOver) return;
+    
+    if (!isTutorialComplete) {
+      setBlocks([getTutorialBlocks()[tutorialStep]]);
+      return;
+    }
     
     if (blocks.length === 0) {
       const blockCount = getBlockCount(score);
@@ -213,7 +270,7 @@ export default function Game() {
       
       setBlocks(newBlocks);
     }
-  }, [score, gameOver, blocks.length]);
+  }, [score, gameOver, blocks.length, isTutorialComplete, tutorialStep]);
 
   // Update handleBlockAction
   const handleBlockAction = (block: Block, action: BlockAction) => {
@@ -223,7 +280,18 @@ export default function Game() {
     }
 
     if (block.action === action) {
-      setScore(prev => prev + 10);
+      if (!isTutorialComplete) {
+        if (tutorialStep < 2) {
+          setTutorialStep(prev => prev + 1);
+        } else {
+          setIsTutorialComplete(true);
+          localStorage.setItem('tutorialComplete', 'true');
+          setTimer(6);
+        }
+      } else {
+        setScore(prev => prev + 10);
+      }
+      
       setTimeout(() => handleBlockClear(block.id), 500);
     }
   };
@@ -315,6 +383,43 @@ export default function Game() {
     }
   };
 
+  // Add touch event handlers
+  const handleTouchStart = (e: React.TouchEvent, block: Block) => {
+    const touch = e.touches[0];
+    const startX = touch.clientX;
+    const startY = touch.clientY;
+    
+    const handleTouchEnd = (e: TouchEvent) => {
+      const touch = e.changedTouches[0];
+      const deltaX = touch.clientX - startX;
+      const deltaY = touch.clientY - startY;
+      const movement: [number, number] = [deltaX, deltaY];
+      const totalMovement = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+      // Handle double tap
+      const currentTime = new Date().getTime();
+      const tapLength = currentTime - lastTapTime;
+      
+      if (tapLength < 300 && totalMovement < 10) {
+        // Double tap detected
+        onDoubleTap(block);
+        setLastTapTime(0); // Reset after double tap
+      } else if (totalMovement < 10) {
+        // Single tap detected
+        onTap(block);
+        setLastTapTime(currentTime);
+      } else {
+        // Swipe detected
+        handleGesture(block, e, movement);
+        setLastTapTime(0); // Reset after swipe
+      }
+
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+
+    window.addEventListener('touchend', handleTouchEnd);
+  };
+
   if (gameOver) {
     return (
       <div className={styles.gameOver}>
@@ -362,7 +467,9 @@ export default function Game() {
         {blocks.map((block) => (
           <div
             key={block.id}
-            className={`${styles.block} ${activeAnimations[block.id] || ''} ${blockTimers[block.id] <= 1 ? styles.shake : ''}`}
+            className={`${styles.block} ${activeAnimations[block.id] || ''} ${
+              !block.isTutorial && blockTimers[block.id] <= 1 ? styles.shake : ''
+            }`}
             style={{
               backgroundColor: block.color,
               width: getBlockDimensions().width + 'px',
@@ -376,10 +483,12 @@ export default function Game() {
               cursor: 'pointer',
               userSelect: 'none',
               touchAction: 'none',
-              opacity: !activeAnimations[block.id] ? 
-                (block.action === BlockAction.AVOID ? 
-                  Math.min(blockTimers[block.id] / 2.5, 1) : 
-                  Math.min(blockTimers[block.id] / 6, 1))
+              opacity: !block.isTutorial ? 
+                (!activeAnimations[block.id] ? 
+                  (block.action === BlockAction.AVOID ? 
+                    Math.min(blockTimers[block.id] / 2.5, 1) : 
+                    Math.min(blockTimers[block.id] / 6, 1))
+                  : 1)
                 : 1
             }}
             onMouseDown={(e) => {
@@ -397,10 +506,16 @@ export default function Game() {
               
               window.addEventListener('mouseup', handleMouseUp);
             }}
+            onTouchStart={(e) => handleTouchStart(e, block)}
             onClick={() => onTap(block)}
             onDoubleClick={() => onDoubleTap(block)}
           >
             {block.icon}
+            {block.isTutorial && (
+              <div className={styles.tutorialText}>
+                {block.tutorialText}
+              </div>
+            )}
           </div>
         ))}
       </div>

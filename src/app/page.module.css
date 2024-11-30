@@ -40,6 +40,9 @@
     cursor: pointer;
     transform-origin: center;
     transition: transform 0.3s ease;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
   }
   
   .shake {
@@ -174,4 +177,21 @@
   /* Stop shake animation if success animation is playing */
   .success.shake {
     animation: success 0.3s ease-out forwards;
+  }
+  
+  .tutorialText {
+    position: absolute;
+    width: 100%;
+    text-align: center;
+    top: 100%;
+    padding-top: 15px;
+    color: #000000;
+    font-size: 1.8rem;
+    font-weight: bold;
+    white-space: nowrap;
+    text-shadow: 
+      -1px -1px 0 #fff,
+      1px -1px 0 #fff,
+      -1px 1px 0 #fff,
+      1px 1px 0 #fff;
   }
