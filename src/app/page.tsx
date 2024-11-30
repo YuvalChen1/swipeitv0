@@ -17,6 +17,19 @@ import {
   Clock,
 } from "lucide-react";
 
+// Add a scoring constant at the top of the component
+const SCORE_VALUES = {
+  [BlockAction.SWIPE_LEFT]: 10,
+  [BlockAction.SWIPE_RIGHT]: 10,
+  [BlockAction.SWIPE_UP]: 10,
+  [BlockAction.SWIPE_DOWN]: 10,
+  [BlockAction.TAP]: 10,
+  [BlockAction.DOUBLE_TAP]: 10,
+  [BlockAction.AVOID]: 10,
+  [BlockAction.EXTRA_LIFE]: 10,
+  [BlockAction.COINS]: 10,
+} as const;
+
 export default function Game() {
   const [score, setScore] = useState(0);
   const [timer, setTimer] = useState(6.0);
@@ -415,7 +428,7 @@ export default function Game() {
           setTimer(6);
         }
       } else {
-        setScore(prev => prev + 10);
+        setScore(prev => prev + SCORE_VALUES[block.action]);
       }
       
       setTimeout(() => handleBlockClear(block.id), 500);
