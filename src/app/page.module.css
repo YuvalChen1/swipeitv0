@@ -43,7 +43,8 @@
   }
   
   .shake {
-    animation: shake 0.5s infinite !important;
+    animation: shake 0.5s infinite;
+    animation-play-state: running;
   }
   
   @keyframes shake {
@@ -103,6 +104,7 @@
   /* Success animation */
   .success {
     animation: success 0.3s ease-out forwards;
+    z-index: 2;
   }
   
   @keyframes success {
@@ -145,4 +147,31 @@
   @keyframes swipeDown {
     0% { transform: translateY(0); }
     100% { transform: translateY(150vh); }
+  }
+  
+  .bonusNotification {
+    position: fixed;
+    top: 60px; /* Below header */
+    right: 20px; /* Position on right side */
+    transform: none; /* Remove the centered transform */
+    background-color: rgba(255, 255, 255, 0.9);
+    color: #000;
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    animation: fadeInOut 1.5s ease-in-out;
+    z-index: 1000;
+  }
+  
+  @keyframes fadeInOut {
+    0% { opacity: 0; transform: translateY(-20px); }
+    20% { opacity: 1; transform: translateY(0); }
+    80% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-20px); }
+  }
+  
+  /* Stop shake animation if success animation is playing */
+  .success.shake {
+    animation: success 0.3s ease-out forwards;
   }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Block, BlockAction } from '@/types/game';
 import styles from './page.module.css';
 
@@ -11,8 +11,9 @@ export default function Game() {
   const [gameOver, setGameOver] = useState(false);
   const [blockTimers, setBlockTimers] = useState<Record<string, number>>({});
   const [activeAnimations, setActiveAnimations] = useState<Record<string, string>>({});
-  const [swipePosition, setSwipePosition] = useState<Record<string, { x: number, y: number }>>({});
+  // const [swipePosition, setSwipePosition] = useState<Record<string, { x: number, y: number }>>({});
   const [animatingBlocks, setAnimatingBlocks] = useState<Set<string>>(new Set());
+  const [bonusNotification, setBonusNotification] = useState<{ points: number, visible: boolean }>({ points: 0, visible: false });
 
   // Add this function at the top of your component to calculate block width
   const getBlockDimensions = () => {
@@ -31,40 +32,15 @@ export default function Game() {
     };
   };
 
-  // Simple block generator
-  const generateBlock = (): Block => {
-    const actions = Object.values(BlockAction);
-    const action = actions[Math.floor(Math.random() * actions.length)];
-    
-    const windowWidth = window.innerWidth;
-    const windowHeight = window.innerHeight;
-    const { width: blockWidth, height: blockHeight } = getBlockDimensions();
-
-    // Calculate center position
-    const centerX = (windowWidth - blockWidth) / 2;
-    const centerY = (windowHeight - blockHeight) / 2;
-
-    // Different colors for different block types
-    const colors = {
-      [BlockAction.SWIPE_LEFT]: '#FF6B6B',
-      [BlockAction.SWIPE_RIGHT]: '#4ECDC4',
-      [BlockAction.SWIPE_UP]: '#45B7D1',
-      [BlockAction.SWIPE_DOWN]: '#96CEB4',
-      [BlockAction.TAP]: '#FFEEAD',
-      [BlockAction.DOUBLE_TAP]: '#FFD93D',
-      [BlockAction.AVOID]: '#000000',
-    };
-
-    return {
-      id: Math.random().toString(36).substr(2, 9),
-      action,
-      color: colors[action],
-      icon: getIconForAction(action),
-      position: {
-        x: centerX,
-        y: centerY,
-      },
-    };
+  // Add back the colors object
+  const colors = {
+    [BlockAction.SWIPE_LEFT]: '#FF6B6B',
+    [BlockAction.SWIPE_RIGHT]: '#4ECDC4',
+    [BlockAction.SWIPE_UP]: '#45B7D1',
+    [BlockAction.SWIPE_DOWN]: '#96CEB4',
+    [BlockAction.TAP]: '#FFEEAD',
+    [BlockAction.DOUBLE_TAP]: '#FFD93D',
+    [BlockAction.AVOID]: '#000000',
   };
 
   // Simple icon getter
@@ -83,6 +59,7 @@ export default function Game() {
 
   // Timer effect - main game timer
   useEffect(() => {
+    // Don't run timer during tutorial or game over
     if (gameOver) return;
     
     const interval = setInterval(() => {
@@ -98,7 +75,53 @@ export default function Game() {
     return () => clearInterval(interval);
   }, [gameOver]);
 
-  // Block timers effect
+  // Remove bonus logic from handleBlockClear
+  const handleBlockClear = (blockId: string) => {
+    setBlocks(prev => {
+      const newBlocks = prev.filter(b => b.id !== blockId);
+      return newBlocks;
+    });
+  };
+
+  // Update the effect that handles bonus awards and timer reset
+  useEffect(() => {
+    if (blocks.length === 0 && !gameOver) {
+      const blockCount = getBlockCount(score);
+
+      // Award bonus first
+      awardTimeBonus(timer, blockCount);
+      
+      // Then reset timer
+      setTimeout(() => {
+        setTimer(6);
+      }, 0);
+    }
+  }, [blocks.length, timer, score, gameOver]);
+
+  // Update the bonus calculation
+  const calculateTimeBonus = (remainingTime: number, totalBlockCount: number) => {
+    // Only give time bonus for 9 or more blocks
+    if (totalBlockCount < 2) return 0;
+
+    if (remainingTime >= 4) return 50;
+    if (remainingTime >= 3) return 30;
+    if (remainingTime >= 2) return 10;
+    return 0;
+  };
+
+  // Update the bonus award logic
+  const awardTimeBonus = (remainingTime: number, blockCount: number) => {
+    const bonus = calculateTimeBonus(remainingTime, blockCount);
+    if (bonus > 0) {
+      setScore(prev => prev + bonus);
+      setBonusNotification({ points: bonus, visible: true });
+      setTimeout(() => {
+        setBonusNotification({ points: 0, visible: false });
+      }, 1500);
+    }
+  };
+
+  // Update block timers effect
   useEffect(() => {
     if (gameOver) return;
     
@@ -107,20 +130,17 @@ export default function Game() {
         const newTimers = { ...prev };
         blocks.forEach(block => {
           if (!(block.id in newTimers)) {
-            newTimers[block.id] = block.action === BlockAction.AVOID ? 2.5 : 6;
+            newTimers[block.id] = block.action === BlockAction.AVOID ? 1.5 : 6;
           } else {
             newTimers[block.id] -= 0.1;
-            if (newTimers[block.id] <= 0 && block.action === BlockAction.AVOID) {
-              // Handle successful avoid
-              setScore(prev => prev + 10);
-              setBlocks(prev => {
-                const remainingBlocks = prev.filter(b => b.id !== block.id);
-                if (remainingBlocks.length === 0) {
-                  // Ensure timer reset happens after block removal
-                  setTimeout(() => setTimer(6), 0);
-                }
-                return remainingBlocks;
-              });
+            if (newTimers[block.id] <= 0) {
+              if (block.action === BlockAction.AVOID) {
+                setScore(prev => prev + 5);
+                setActiveAnimations(prev => ({ ...prev, [block.id]: styles.success }));
+                setTimeout(() => handleBlockClear(block.id), 300);
+              } else {
+                setGameOver(true);
+              }
               delete newTimers[block.id];
             }
           }
@@ -143,77 +163,68 @@ export default function Game() {
     return 1;
   };
 
-  // Block spawning effect with positioned blocks
-  useEffect(() => {
-    if (gameOver) return;
-    
-    // Only spawn new blocks if there are none
-    if (blocks.length === 0) {
-      const blockCount = getBlockCount(score);
-      const positions = calculateBlockPositions(blockCount);
-      
-      const newBlocks = Array(blockCount).fill(null).map((_, index) => {
-        const block = generateBlock();
-        block.position = positions[index];
-        return block;
-      });
-      
-      setBlocks(newBlocks);
-    }
-  }, [score, gameOver, blocks.length]);
-
   // Helper function to calculate block positions
   const calculateBlockPositions = (count: number) => {
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
     const { width: blockWidth, height: blockHeight } = getBlockDimensions();
-    const verticalGap = 20; // Reduced gap between blocks
+    const verticalGap = 20;
 
-    // Calculate center position
+    // Calculate center column
     const centerX = (windowWidth - blockWidth) / 2;
-    const centerY = (windowHeight - blockHeight) / 2;
-
-    if (count === 1) {
-      return [{ x: centerX, y: centerY }];
-    }
-
-    // For multiple blocks, position them vertically centered and spread out
-    const positions = [];
+    
+    // Calculate starting Y position for the first block
     const totalHeight = (count * blockHeight) + ((count - 1) * verticalGap);
     const startY = (windowHeight - totalHeight) / 2;
 
+    // Return fixed positions
+    const positions = [];
     for (let i = 0; i < count; i++) {
       positions.push({
         x: centerX,
         y: startY + (i * (blockHeight + verticalGap))
       });
     }
-
     return positions;
   };
 
-  // Simple action handler
+  // Update block spawning effect
+  useEffect(() => {
+    if (gameOver) return;
+    
+    if (blocks.length === 0) {
+      const blockCount = getBlockCount(score);
+      const positions = calculateBlockPositions(blockCount);
+      
+      // Create all blocks at once with their fixed positions
+      const newBlocks = positions.map((position, index) => {
+        const actions = Object.values(BlockAction);
+        const action = actions[Math.floor(Math.random() * actions.length)];
+        
+        return {
+          id: Math.random().toString(36).substr(2, 9),
+          action,
+          color: colors[action],
+          icon: getIconForAction(action),
+          position: position,  // Use the exact position from the array
+          originalIndex: index  // Add this to maintain position
+        };
+      });
+      
+      setBlocks(newBlocks);
+    }
+  }, [score, gameOver, blocks.length]);
+
+  // Update handleBlockAction
   const handleBlockAction = (block: Block, action: BlockAction) => {
-    // For AVOID blocks - game over only when clicked/interacted with
     if (block.action === BlockAction.AVOID) {
       setGameOver(true);
       return;
     }
 
-    // For all other blocks - only succeed on correct action
     if (block.action === action) {
       setScore(prev => prev + 10);
-      
-      // Wait for animation to complete before removing block
-      setTimeout(() => {
-        setBlocks(prev => {
-          const newBlocks = prev.filter(b => b.id !== block.id);
-          if (newBlocks.length === 0) {
-            setTimer(6);
-          }
-          return newBlocks;
-        });
-      }, 500); // Updated to match new animation duration
+      setTimeout(() => handleBlockClear(block.id), 500);
     }
   };
 
@@ -309,7 +320,12 @@ export default function Game() {
       <div className={styles.gameOver}>
         <h1>Game Over!</h1>
         <p>Final Score: {score}</p>
-        <button onClick={() => window.location.reload()}>Play Again</button>
+        <button onClick={() => {
+          setScore(0);
+          setTimer(6);
+          setGameOver(false);
+          setBlocks([]);
+        }}>Play Again</button>
       </div>
     );
   }
@@ -336,29 +352,35 @@ export default function Game() {
         </div>
       </header>
       
+      {bonusNotification.visible && (
+        <div className={styles.bonusNotification}>
+          +{bonusNotification.points}
+        </div>
+      )}
+      
       <div className={styles.gameArea}>
         {blocks.map((block) => (
           <div
             key={block.id}
-            className={`${styles.block} ${blockTimers[block.id] <= 1 ? styles.shake : ''} ${activeAnimations[block.id] || ''}`}
+            className={`${styles.block} ${activeAnimations[block.id] || ''} ${blockTimers[block.id] <= 1 ? styles.shake : ''}`}
             style={{
               backgroundColor: block.color,
-              left: block.position.x,
-              top: block.position.y,
               width: getBlockDimensions().width + 'px',
               height: getBlockDimensions().height + 'px',
+              position: 'absolute',
+              left: block.position.x,
+              top: block.position.y,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
               userSelect: 'none',
               touchAction: 'none',
-              opacity: block.action === BlockAction.AVOID ? 
-                Math.min(blockTimers[block.id] / 2.5, 1) : 
-                Math.min(blockTimers[block.id] / 6, 1),
-              transform: block.action.includes('SWIPE') && swipePosition[block.id] 
-                ? `translate(${swipePosition[block.id].x}px, ${swipePosition[block.id].y}px)` 
-                : 'none'
+              opacity: !activeAnimations[block.id] ? 
+                (block.action === BlockAction.AVOID ? 
+                  Math.min(blockTimers[block.id] / 2.5, 1) : 
+                  Math.min(blockTimers[block.id] / 6, 1))
+                : 1
             }}
             onMouseDown={(e) => {
               const startX = e.clientX;

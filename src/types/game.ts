@@ -17,4 +17,5 @@ export enum BlockAction {
       x: number;
       y: number;
     };
+    originalIndex: number;
   }
