@@ -31,7 +31,7 @@ export default function Game() {
         width: 0,
         height: 0,
         gap: 0,
-        headerHeight: 0
+        headerHeight: 60
       };
     }
 
@@ -39,7 +39,7 @@ export default function Game() {
     const windowHeight = window.innerHeight;
     
     // Calculate header height based on screen size
-    const headerHeight = windowHeight < 600 ? 40 : 60;
+    const headerHeight = windowHeight < 600 ? 50 : 60;
     
     // Calculate available height (screen height minus header)
     const availableHeight = windowHeight - headerHeight;
@@ -474,7 +474,9 @@ export default function Game() {
         right: 0,
         display: 'flex',
         justifyContent: 'space-between',
-        padding: typeof window !== 'undefined' && window.innerHeight < 600 ? '0.5rem' : '1rem',
+        alignItems: 'center',
+        minHeight: '50px',
+        padding: typeof window !== 'undefined' && window.innerHeight < 600 ? '0.75rem' : '1rem',
         height: `${getBlockDimensions().headerHeight}px`,
         backgroundColor: '#000000',
         color: 'white',
