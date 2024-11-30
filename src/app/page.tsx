@@ -26,17 +26,38 @@ export default function Game() {
   // Add this function at the top of your component to calculate block width
   const getBlockDimensions = () => {
     const windowWidth = window.innerWidth;
-    // For mobile devices (small screens)
-    if (windowWidth < 768) {
+    const windowHeight = window.innerHeight;
+    
+    // Calculate header height based on screen size
+    const headerHeight = windowHeight < 600 ? 40 : 60;
+    
+    // Calculate available height (screen height minus header)
+    const availableHeight = windowHeight - headerHeight;
+    
+    // For very small screens (like iPhone 4)
+    if (windowHeight < 600) {
       return {
-        width: windowWidth * 0.9, // 90% of screen width
-        height: 80
+        width: windowWidth * 0.9,
+        height: Math.min(availableHeight * 0.09, 70), // 9% of available height
+        gap: 8, // Smaller gap for very small screens
+        headerHeight
+      };
+    }
+    // For regular mobile screens
+    else if (windowWidth < 768) {
+      return {
+        width: windowWidth * 0.9,
+        height: Math.min(availableHeight * 0.095, 70),
+        gap: 15,
+        headerHeight
       };
     }
     // For larger screens
     return {
-      width: windowWidth * 0.4, // 40% of screen width
-      height: 80
+      width: windowWidth * 0.4,
+      height: Math.min(availableHeight * 0.1, 70),
+      gap: 20,
+      headerHeight
     };
   };
 
@@ -108,7 +129,7 @@ export default function Game() {
   // Update the bonus calculation
   const calculateTimeBonus = (remainingTime: number, totalBlockCount: number) => {
     // Only give time bonus for 9 or more blocks
-    if (totalBlockCount < 9) return 0;
+    if (totalBlockCount < 2) return 0;
 
     if (remainingTime >= 3.5) return 50;
     if (remainingTime >= 2.5) return 30;
@@ -140,7 +161,7 @@ export default function Game() {
           if (block.isTutorial) return;
 
           if (!(block.id in newTimers)) {
-            newTimers[block.id] = block.action === BlockAction.AVOID ? 2.5 : 6;
+            newTimers[block.id] = block.action === BlockAction.AVOID ? 2 : 6;
           } else {
             newTimers[block.id] -= 0.1;
             if (newTimers[block.id] <= 0) {
@@ -163,13 +184,13 @@ export default function Game() {
   }, [gameOver, blocks]);
 
   const getBlockCount = (score: number) => {
-    if (score >= 1500) return 9;
-    if (score >= 1000) return 7;
-    if (score >= 700) return 6;
+    if (score >= 1000) return 9;
+    if (score >= 750) return 7;
+    if (score >= 600) return 6;
     if (score >= 500) return 5;
-    if (score >= 300) return 4;
-    if (score >= 200) return 3;
-    if (score >= 50) return 2;
+    if (score >= 400) return 4;
+    if (score >= 250) return 3;
+    if (score >= 100) return 2;
     return 1;
   };
 
@@ -177,22 +198,24 @@ export default function Game() {
   const calculateBlockPositions = (count: number) => {
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
-    const { width: blockWidth, height: blockHeight } = getBlockDimensions();
-    const verticalGap = 20;
+    const { width: blockWidth, height: blockHeight, gap, headerHeight } = getBlockDimensions();
 
     // Calculate center column
     const centerX = (windowWidth - blockWidth) / 2;
     
+    // Add extra margin-top for small screens
+    const marginTop = windowHeight < 850 ? 20 : 0;
+    
     // Calculate starting Y position for the first block
-    const totalHeight = (count * blockHeight) + ((count - 1) * verticalGap);
-    const startY = (windowHeight - totalHeight) / 2;
+    const totalHeight = (count * blockHeight) + ((count - 1) * gap);
+    const startY = ((windowHeight - totalHeight) / 2) + marginTop;
 
     // Return fixed positions
     const positions = [];
     for (let i = 0; i < count; i++) {
       positions.push({
         x: centerX,
-        y: startY + (i * (blockHeight + verticalGap))
+        y: startY + (i * (blockHeight + gap))
       });
     }
     return positions;
@@ -444,15 +467,24 @@ export default function Game() {
         right: 0,
         display: 'flex',
         justifyContent: 'space-between',
-        padding: '1rem',
+        padding: window.innerHeight < 600 ? '0.5rem' : '1rem',
+        height: `${getBlockDimensions().headerHeight}px`,
         backgroundColor: '#000000',
         color: 'white',
         zIndex: 1000
       }}>
-        <div className={styles.score} style={{ color: 'white', fontWeight: 'bold', fontSize: '1.2rem' }}>
+        <div className={styles.score} style={{ 
+          color: 'white', 
+          fontWeight: 'bold', 
+          fontSize: window.innerHeight < 600 ? '1rem' : '1.2rem' 
+        }}>
           Score: {score}
         </div>
-        <div className={styles.timer} style={{ color: 'white', fontWeight: 'bold', fontSize: '1.2rem' }}>
+        <div className={styles.timer} style={{ 
+          color: 'white', 
+          fontWeight: 'bold', 
+          fontSize: window.innerHeight < 600 ? '1rem' : '1.2rem' 
+        }}>
           Time: {timer}s
         </div>
       </header>
@@ -463,7 +495,9 @@ export default function Game() {
         </div>
       )}
       
-      <div className={styles.gameArea}>
+      <div className={styles.gameArea} style={{
+        paddingTop: `${getBlockDimensions().headerHeight}px`
+      }}>
         {blocks.map((block) => (
           <div
             key={block.id}
