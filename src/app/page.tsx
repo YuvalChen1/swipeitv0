@@ -111,33 +111,15 @@ export default function Game() {
     });
   };
 
-  // Update the effect that handles bonus awards and timer reset
-  useEffect(() => {
-    if (blocks.length === 0 && !gameOver) {
-      const blockCount = getBlockCount(score);
-
-      // Award bonus first
-      awardTimeBonus(timer, blockCount);
-      
-      // Then reset timer
-      setTimeout(() => {
-        setTimer(6);
-      }, 0);
-    }
-  }, [blocks.length, timer, score, gameOver]);
-
-  // Update the bonus calculation
+  // Move these functions up, before they're used
   const calculateTimeBonus = (remainingTime: number, totalBlockCount: number) => {
-    // Only give time bonus for 9 or more blocks
-    if (totalBlockCount < 2) return 0;
-
+    if (totalBlockCount < 9) return 0;
     if (remainingTime >= 3.5) return 50;
     if (remainingTime >= 2.5) return 30;
     if (remainingTime >= 1.5) return 10;
     return 0;
   };
 
-  // Update the bonus award logic
   const awardTimeBonus = (remainingTime: number, blockCount: number) => {
     const bonus = calculateTimeBonus(remainingTime, blockCount);
     if (bonus > 0) {
@@ -148,6 +130,17 @@ export default function Game() {
       }, 1500);
     }
   };
+
+  // Now the useEffect that uses awardTimeBonus
+  useEffect(() => {
+    if (blocks.length === 0 && !gameOver) {
+      const blockCount = getBlockCount(score);
+      awardTimeBonus(timer, blockCount);
+      setTimeout(() => {
+        setTimer(6);
+      }, 0);
+    }
+  }, [blocks.length, timer, score, gameOver]);
 
   // Update block timers effect to ignore tutorial blocks
   useEffect(() => {
@@ -198,7 +191,7 @@ export default function Game() {
   const calculateBlockPositions = (count: number) => {
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
-    const { width: blockWidth, height: blockHeight, gap, headerHeight } = getBlockDimensions();
+    const { width: blockWidth, height: blockHeight, gap } = getBlockDimensions();
 
     // Calculate center column
     const centerX = (windowWidth - blockWidth) / 2;
@@ -293,7 +286,7 @@ export default function Game() {
       
       setBlocks(newBlocks);
     }
-  }, [score, gameOver, blocks.length, isTutorialComplete, tutorialStep]);
+  }, [score, gameOver, blocks.length, isTutorialComplete, tutorialStep, calculateBlockPositions, colors, getTutorialBlocks]);
 
   // Update handleBlockAction
   const handleBlockAction = (block: Block, action: BlockAction) => {
@@ -320,7 +313,11 @@ export default function Game() {
   };
 
   // Update handleGesture
-  const handleGesture = (block: Block, event: any, movement: [number, number]) => {
+  const handleGesture = (
+    block: Block, 
+    event: MouseEvent | TouchEvent, 
+    movement: [number, number]
+  ) => {
     if (!block.action.includes('SWIPE')) return;
     
     // Don't handle new gestures if block is being animated
