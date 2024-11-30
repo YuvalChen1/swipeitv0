@@ -25,6 +25,16 @@ export default function Game() {
 
   // Add this function at the top of your component to calculate block width
   const getBlockDimensions = () => {
+    // Check if window is available (client-side only)
+    if (typeof window === 'undefined') {
+      return {
+        width: 0,
+        height: 0,
+        gap: 0,
+        headerHeight: 0
+      };
+    }
+
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
     
@@ -464,7 +474,7 @@ export default function Game() {
         right: 0,
         display: 'flex',
         justifyContent: 'space-between',
-        padding: window.innerHeight < 600 ? '0.5rem' : '1rem',
+        padding: typeof window !== 'undefined' && window.innerHeight < 600 ? '0.5rem' : '1rem',
         height: `${getBlockDimensions().headerHeight}px`,
         backgroundColor: '#000000',
         color: 'white',
@@ -473,14 +483,14 @@ export default function Game() {
         <div className={styles.score} style={{ 
           color: 'white', 
           fontWeight: 'bold', 
-          fontSize: window.innerHeight < 600 ? '1rem' : '1.2rem' 
+          fontSize: typeof window !== 'undefined' && window.innerHeight < 600 ? '1rem' : '1.2rem' 
         }}>
           Score: {score}
         </div>
         <div className={styles.timer} style={{ 
           color: 'white', 
           fontWeight: 'bold', 
-          fontSize: window.innerHeight < 600 ? '1rem' : '1.2rem' 
+          fontSize: typeof window !== 'undefined' && window.innerHeight < 600 ? '1rem' : '1.2rem' 
         }}>
           Time: {timer}s
         </div>
