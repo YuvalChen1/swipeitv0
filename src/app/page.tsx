@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Block, BlockAction } from '@/types/game';
 import styles from './page.module.css';
 import {
@@ -50,7 +50,6 @@ export default function Game() {
   const [lastTapTime, setLastTapTime] = useState(0);
   const [lives, setLives] = useState(0);
   const [processingBlocks, setProcessingBlocks] = useState<Set<string>>(new Set());
-  const [activeAnimationCount, setActiveAnimationCount] = useState(0);
   const shouldStopTimer = useRef(false);
 
   // Add this function at the top of your component to calculate block width
@@ -98,8 +97,8 @@ export default function Game() {
     };
   };
 
-  // Update colors object
-  const colors = {
+  // Wrap colors in useMemo
+  const colors = useMemo(() => ({
     [BlockAction.SWIPE_LEFT]: '#FF6B6B',
     [BlockAction.SWIPE_RIGHT]: '#4ECDC4',
     [BlockAction.SWIPE_UP]: '#45B7D1',
@@ -109,7 +108,7 @@ export default function Game() {
     [BlockAction.AVOID]: '#000000',
     [BlockAction.EXTRA_LIFE]: '#ff0000',
     [BlockAction.COINS]: '#22d65e',
-  };
+  }), []);
 
   // Update icon getter to use Lucide icons
   const getIconForAction = (action: BlockAction) => {
@@ -173,7 +172,8 @@ export default function Game() {
     return 0;
   };
 
-  const awardTimeBonus = (remainingTime: number, blockCount: number) => {
+  // First, memoize the awardTimeBonus function with useCallback
+  const awardTimeBonus = useCallback((remainingTime: number, blockCount: number) => {
     const bonus = calculateTimeBonus(remainingTime, blockCount);
     if (bonus > 0) {
       setScore(prev => prev + bonus);
@@ -184,23 +184,21 @@ export default function Game() {
         setBonusNotification({ points: 0, visible: false });
       }, 1500);
 
-      // Clean up timeout if component unmounts
       return () => clearTimeout(timeoutId);
     }
-  };
+  }, []);
 
-  // Now the useEffect that uses awardTimeBonus
+  // Then update the useEffect that uses it
   useEffect(() => {
-    if (blocks.length === 0 && !gameOver) {
+    if (blocks.length === 0 && !gameOver && isTutorialComplete) {
       const blockCount = getBlockCount(score);
       awardTimeBonus(timer, blockCount);
     }
     
-    // Clean up bonus notification when game over
     if (gameOver) {
       setBonusNotification({ points: 0, visible: false });
     }
-  }, [blocks.length, timer, score, gameOver]);
+  }, [blocks.length, timer, score, gameOver, isTutorialComplete]); // Remove awardTimeBonus from dependencies
 
   // Update block timers effect to ignore tutorial blocks
   useEffect(() => {
@@ -248,7 +246,7 @@ export default function Game() {
   };
 
   // Helper function to calculate block positions
-  const calculateBlockPositions = (count: number) => {
+  const calculateBlockPositions = useCallback((count: number) => {
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
     const { width: blockWidth, height: blockHeight, gap } = getBlockDimensions();
@@ -272,10 +270,10 @@ export default function Game() {
       });
     }
     return positions;
-  };
+  }, [getBlockDimensions]);
 
   // Add tutorial blocks generator
-  const getTutorialBlocks = (): Block[] => {
+  const getTutorialBlocks = useCallback((): Block[] => {
     const { width: blockWidth, height: blockHeight } = getBlockDimensions();
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
@@ -314,7 +312,7 @@ export default function Game() {
         tutorialText: 'Swipe Left'
       }
     ];
-  };
+  }, [getBlockDimensions, colors, getIconForAction]);
 
   // Update block spawning effect
   useEffect(() => {
@@ -354,9 +352,6 @@ export default function Game() {
 
   // Update handleBlockAction
   const handleBlockAction = (block: Block, action: BlockAction) => {
-    // Increment animation count when starting animation
-    setActiveAnimationCount(prev => prev + 1);
-    
     // Prevent multiple clicks on the same block
     if (processingBlocks.has(block.id)) return;
     
@@ -377,7 +372,6 @@ export default function Game() {
       // Add shatter effect to the clicked block
       const blockElement = document.querySelector(`[data-block-id="${block.id}"]`);
       if (blockElement) {
-        const currentColor = window.getComputedStyle(blockElement).backgroundColor;
         blockElement.innerHTML += '<div class="' + styles.avoidShatter + '"></div>';
         (blockElement as HTMLElement).style.backgroundColor = 'transparent';
         const icon = blockElement.querySelector('svg');
@@ -505,8 +499,6 @@ export default function Game() {
         next.delete(block.id);
         return next;
       });
-      // Decrement animation count when animation completes
-      setActiveAnimationCount(prev => prev - 1);
     }, 400);
   };
 
