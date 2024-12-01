@@ -49,51 +49,50 @@ export default function Game() {
   const [tutorialStep, setTutorialStep] = useState(0);
   const [lastTapTime, setLastTapTime] = useState(0);
   const [lives, setLives] = useState(0);
+  const [processingBlocks, setProcessingBlocks] = useState<Set<string>>(new Set());
+  const [activeAnimationCount, setActiveAnimationCount] = useState(0);
 
   // Add this function at the top of your component to calculate block width
   const getBlockDimensions = () => {
-    // Check if window is available (client-side only)
     if (typeof window === 'undefined') {
       return {
         width: 0,
         height: 0,
         gap: 0,
-        headerHeight: 60
+        headerHeight: 40
       };
     }
 
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
     
-    // Calculate header height based on screen size
-    const headerHeight = windowHeight < 600 ? 50 : 60;
+    // Make header height responsive
+    const headerHeight = Math.min(windowHeight * 0.06, 40); // 6% of screen height, max 40px
     
-    // Calculate available height (screen height minus header)
+    // Calculate available height
     const availableHeight = windowHeight - headerHeight;
     
-    // For very small screens (like iPhone 4)
-    if (windowHeight < 600) {
+    // Calculate block height to ensure 9 blocks + gaps always fit
+    // Formula: (9 blocks * height) + (8 gaps) = availableHeight
+    const totalGapSpace = availableHeight * 0.1; // Reduce gap space to 12%
+    const gapSize = totalGapSpace / 8; // Divide by number of gaps (8)
+    const blockHeight = (availableHeight - totalGapSpace) / 9.2; // Divide by 9.2 for slightly bigger blocks
+
+    // For mobile screens
+    if (windowWidth < 768) {
       return {
-        width: windowWidth * 0.9,
-        height: Math.min(availableHeight * 0.11, 75),
-        gap: 5,
+        width: windowWidth * 0.9, // 90% of screen width
+        height: Math.min(blockHeight, 70), // Increased cap height to 52px for mobile
+        gap: Math.max(gapSize, 2), // Minimum gap of 2px
         headerHeight
       };
     }
-    // For regular mobile screens
-    else if (windowWidth < 768) {
-      return {
-        width: windowWidth * 0.9,
-        height: Math.min(availableHeight * 0.115, 75),
-        gap: 8,
-        headerHeight
-      };
-    }
-    // For larger screens
+    
+    // For desktop screens
     return {
       width: windowWidth * 0.4,
-      height: Math.min(availableHeight * 0.12, 75),
-      gap: 12,
+      height: Math.min(blockHeight, 70),
+      gap: Math.min(gapSize, 12),
       headerHeight
     };
   };
@@ -143,16 +142,16 @@ export default function Game() {
     
     const interval = setInterval(() => {
       setTimer((prev) => {
-        if (prev <= 0) {
+        if (prev <= 0 && activeAnimationCount === 0) {
           setGameOver(true);
           return 0;
         }
-        return Math.round((prev - 0.1) * 10) / 10; // Round to 1 decimal place
+        return Math.round((prev - 0.1) * 10) / 10;
       });
-    }, 100); // Update every 100ms instead of 1000ms
+    }, 100);
 
     return () => clearInterval(interval);
-  }, [gameOver, isTutorialComplete]);
+  }, [gameOver, isTutorialComplete, activeAnimationCount]);
 
   // Remove bonus logic from handleBlockClear
   const handleBlockClear = (blockId: string) => {
@@ -341,6 +340,15 @@ export default function Game() {
 
   // Update handleBlockAction
   const handleBlockAction = (block: Block, action: BlockAction) => {
+    // Increment animation count when starting animation
+    setActiveAnimationCount(prev => prev + 1);
+    
+    // Prevent multiple clicks on the same block
+    if (processingBlocks.has(block.id)) return;
+    
+    // Add block to processing set immediately
+    setProcessingBlocks(prev => new Set(prev).add(block.id));
+
     if (block.action === BlockAction.AVOID) {
       // Add overlay to freeze game appearance
       const overlay = document.createElement('div');
@@ -412,9 +420,67 @@ export default function Game() {
       // Handle special blocks
       if (block.action === BlockAction.COINS) {
         console.log('Coins block clicked!');
+        const blockElement = document.querySelector(`[data-block-id="${block.id}"]`);
+        if (blockElement) {
+          const container = document.createElement('div');
+          container.style.position = 'absolute';
+          container.style.inset = '0';
+          container.style.overflow = 'visible';
+
+          // Create 12 particles in a circle
+          for (let i = 0; i < 12; i++) {
+            const particle = document.createElement('div');
+            particle.className = styles.coinParticle;
+            
+            // Calculate random direction
+            const angle = (i / 12) * Math.PI * 2;
+            const distance = 100; // How far particles travel
+            const tx = Math.cos(angle) * distance;
+            const ty = Math.sin(angle) * distance;
+            
+            particle.style.setProperty('--tx', `${tx}px`);
+            particle.style.setProperty('--ty', `${ty}px`);
+            particle.style.left = '50%';
+            particle.style.top = '50%';
+            particle.style.transform = 'translate(-50%, -50%)';
+            
+            container.appendChild(particle);
+          }
+          
+          blockElement.appendChild(container);
+        }
         setActiveAnimations(prev => ({ ...prev, [block.id]: styles.coinShatter }));
       } else if (block.action === BlockAction.EXTRA_LIFE) {
         console.log('Heart block clicked!');
+        const blockElement = document.querySelector(`[data-block-id="${block.id}"]`);
+        if (blockElement) {
+          const container = document.createElement('div');
+          container.style.position = 'absolute';
+          container.style.inset = '0';
+          container.style.overflow = 'visible';
+
+          // Create 8 particles in a circle
+          for (let i = 0; i < 8; i++) {
+            const particle = document.createElement('div');
+            particle.className = styles.heartParticle;
+            
+            // Calculate random direction
+            const angle = (i / 8) * Math.PI * 2;
+            const distance = 120; // Hearts travel further
+            const tx = Math.cos(angle) * distance;
+            const ty = Math.sin(angle) * distance;
+            
+            particle.style.setProperty('--tx', `${tx}px`);
+            particle.style.setProperty('--ty', `${ty}px`);
+            particle.style.left = '50%';
+            particle.style.top = '50%';
+            particle.style.transform = 'translate(-50%, -50%)';
+            
+            container.appendChild(particle);
+          }
+          
+          blockElement.appendChild(container);
+        }
         setActiveAnimations(prev => ({ ...prev, [block.id]: styles.heartShatter }));
         setLives(prev => prev + 1);
       }
@@ -433,6 +499,18 @@ export default function Game() {
       
       setTimeout(() => handleBlockClear(block.id), 500);
     }
+
+    // Add cleanup in the setTimeout
+    setTimeout(() => {
+      handleBlockClear(block.id);
+      setProcessingBlocks(prev => {
+        const next = new Set(prev);
+        next.delete(block.id);
+        return next;
+      });
+      // Decrement animation count when animation completes
+      setActiveAnimationCount(prev => prev - 1);
+    }, 400);
   };
 
   // Update handleGesture
@@ -504,24 +582,37 @@ export default function Game() {
     }
   };
 
-  // Update click handlers
+  // Update onTap handler
   const onTap = (block: Block) => {
+    // Prevent tap if block is being processed
+    if (processingBlocks.has(block.id)) return;
+
     if (block.action === BlockAction.TAP || 
         block.action === BlockAction.EXTRA_LIFE || 
         block.action === BlockAction.COINS) {
+      // Add to processing immediately
+      setProcessingBlocks(prev => new Set(prev).add(block.id));
+      
       setActiveAnimations(prev => ({ ...prev, [block.id]: styles.tapping }));
       setTimeout(() => {
         setActiveAnimations(prev => ({ ...prev, [block.id]: styles.success }));
         handleBlockAction(block, BlockAction.TAP);
       }, 200);
     } else if (block.action === BlockAction.AVOID) {
+      setProcessingBlocks(prev => new Set(prev).add(block.id));
       handleBlockAction(block, BlockAction.AVOID);
     }
   };
 
-  // Add double tap handler
+  // Update onDoubleTap handler
   const onDoubleTap = (block: Block) => {
+    // Prevent double tap if block is being processed
+    if (processingBlocks.has(block.id)) return;
+
     if (block.action === BlockAction.DOUBLE_TAP) {
+      // Add to processing immediately
+      setProcessingBlocks(prev => new Set(prev).add(block.id));
+      
       setActiveAnimations(prev => ({ ...prev, [block.id]: styles.tapping }));
       setTimeout(() => {
         setActiveAnimations(prev => ({ ...prev, [block.id]: styles.success }));
@@ -620,7 +711,7 @@ export default function Game() {
         <div className={styles.timerContainer}>
           <Clock size={24} color="#86EFAC" />
           <span className={styles.timer}>
-            {timer.toFixed(1)}s
+            {Math.max(0, timer).toFixed(1)}s
           </span>
         </div>
       </header>
