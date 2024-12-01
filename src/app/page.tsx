@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Block, BlockAction } from '@/types/game';
 import styles from './page.module.css';
 import {
@@ -51,6 +51,7 @@ export default function Game() {
   const [lives, setLives] = useState(0);
   const [processingBlocks, setProcessingBlocks] = useState<Set<string>>(new Set());
   const [activeAnimationCount, setActiveAnimationCount] = useState(0);
+  const shouldStopTimer = useRef(false);
 
   // Add this function at the top of your component to calculate block width
   const getBlockDimensions = () => {
@@ -141,17 +142,19 @@ export default function Game() {
     if (gameOver || !isTutorialComplete) return;
     
     const interval = setInterval(() => {
-      setTimer((prev) => {
-        if (prev <= 0 && activeAnimationCount === 0) {
-          setGameOver(true);
-          return 0;
-        }
-        return Math.round((prev - 0.1) * 10) / 10;
-      });
+      if (!shouldStopTimer.current) {
+        setTimer((prev) => {
+          if (prev <= 0) {
+            setGameOver(true);
+            return 0;
+          }
+          return Math.round((prev - 0.1) * 10) / 10;
+        });
+      }
     }, 100);
 
     return () => clearInterval(interval);
-  }, [gameOver, isTutorialComplete, activeAnimationCount]);
+  }, [gameOver, isTutorialComplete]);
 
   // Remove bonus logic from handleBlockClear
   const handleBlockClear = (blockId: string) => {
@@ -175,9 +178,14 @@ export default function Game() {
     if (bonus > 0) {
       setScore(prev => prev + bonus);
       setBonusNotification({ points: bonus, visible: true });
-      setTimeout(() => {
+      
+      // Always clear bonus notification after delay
+      const timeoutId = setTimeout(() => {
         setBonusNotification({ points: 0, visible: false });
       }, 1500);
+
+      // Clean up timeout if component unmounts
+      return () => clearTimeout(timeoutId);
     }
   };
 
@@ -186,9 +194,11 @@ export default function Game() {
     if (blocks.length === 0 && !gameOver) {
       const blockCount = getBlockCount(score);
       awardTimeBonus(timer, blockCount);
-      setTimeout(() => {
-        setTimer(6);
-      }, 0);
+    }
+    
+    // Clean up bonus notification when game over
+    if (gameOver) {
+      setBonusNotification({ points: 0, visible: false });
     }
   }, [blocks.length, timer, score, gameOver]);
 
@@ -319,6 +329,10 @@ export default function Game() {
       const blockCount = getBlockCount(score);
       const positions = calculateBlockPositions(blockCount);
       
+      // Reset timer when spawning new blocks
+      setTimer(6.0);
+      shouldStopTimer.current = false;
+      
       // Create all blocks at once with their fixed positions
       const newBlocks = positions.map((position, index) => {
         const actions = Object.values(BlockAction);
@@ -350,66 +364,49 @@ export default function Game() {
     setProcessingBlocks(prev => new Set(prev).add(block.id));
 
     if (block.action === BlockAction.AVOID) {
-      // Add overlay to freeze game appearance
-      const overlay = document.createElement('div');
-      overlay.className = styles.gameFreeze;
-      document.body.appendChild(overlay);
+      // Clear any existing bonus notifications immediately
+      setBonusNotification({ points: 0, visible: false });
+      shouldStopTimer.current = true;
 
-      // Add shatter effect with more shards
+      // Create freeze overlay
+      const gameStateOverlay = document.createElement('div');
+      gameStateOverlay.className = styles.gameFreeze;
+      gameStateOverlay.style.pointerEvents = 'all';
+      document.body.appendChild(gameStateOverlay);
+
+      // Add shatter effect to the clicked block
       const blockElement = document.querySelector(`[data-block-id="${block.id}"]`);
       if (blockElement) {
-        // First, clone the current background color and icon color
         const currentColor = window.getComputedStyle(blockElement).backgroundColor;
-        
-        // Create a container for shatter pieces
-        const shatterContainer = document.createElement('div');
-        shatterContainer.className = styles.avoidShatter;
-        shatterContainer.style.position = 'absolute';
-        shatterContainer.style.inset = '0';
-        shatterContainer.style.backgroundColor = currentColor;
-        
-        // Add shatter pieces to the container
-        shatterContainer.innerHTML = '<span></span>'.repeat(6);
-        
-        // Apply the color to shatter pieces
-        const shatterPieces = shatterContainer.querySelectorAll('span');
-        shatterPieces.forEach(piece => {
-          (piece as HTMLElement).style.backgroundColor = currentColor;
-        });
-
-        // Add the shatter container to the block
-        blockElement.appendChild(shatterContainer);
-        
-        // Hide original content after a tiny delay to allow shatter animation to start
-        setTimeout(() => {
-          (blockElement as HTMLElement).style.backgroundColor = 'transparent';
-          const icon = blockElement.querySelector('svg');
-          if (icon) icon.style.opacity = '0';
-        }, 50);
+        blockElement.innerHTML += '<div class="' + styles.avoidShatter + '"></div>';
+        (blockElement as HTMLElement).style.backgroundColor = 'transparent';
+        const icon = blockElement.querySelector('svg');
+        if (icon) icon.style.opacity = '0';
       }
-      
-      setActiveAnimations(prev => ({ ...prev, [block.id]: styles.avoidShatter }));
-      
-      // Make all blocks non-interactable
+
+      // Freeze all blocks
       const allBlocks = document.querySelectorAll(`.${styles.block}`);
       allBlocks.forEach(block => {
+        (block as HTMLElement).style.animation = 'none';
         (block as HTMLElement).style.pointerEvents = 'none';
       });
 
-      // Store current timer value
+      // Stop the timer by clearing all intervals and freezing the timer value
       const currentTimer = timer;
+      setTimer(currentTimer);
       
-      // Freeze timer updates
-      const timerInterval = setInterval(() => {
-        setTimer(currentTimer);
-      }, 100);
+      // Clear ALL intervals in the game
+      for (let i = 1; i < 10000; i++) {
+        window.clearInterval(i);
+      }
 
-      // Delay game over and remove overlay
+      // Transition to game over
       setTimeout(() => {
-        clearInterval(timerInterval);
-        document.body.removeChild(overlay);
+        gameStateOverlay.remove();
         setGameOver(true);
-      }, 2000);
+        shouldStopTimer.current = false;
+      }, 1000);
+
       return;
     }
 
@@ -669,9 +666,10 @@ export default function Game() {
         <p>Final Score: {score}</p>
         <button onClick={() => {
           setScore(0);
-          setTimer(6);
+          setTimer(6.0);
           setGameOver(false);
           setBlocks([]);
+          shouldStopTimer.current = false;
         }}>Play Again</button>
       </div>
     );
