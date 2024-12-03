@@ -11,11 +11,11 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID1,
 };
 
-console.log('Firebase Config:', {
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID1,
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY1,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN1
-});
+console.log('Environment Variables Status:');
+console.log('NEXT_PUBLIC_FIREBASE_API_KEY1:', process.env.NEXT_PUBLIC_FIREBASE_API_KEY1 ? 'Defined' : 'Undefined');
+console.log('NEXT_PUBLIC_FIREBASE_PROJECT_ID1:', process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID1 ? 'Defined' : 'Undefined');
+console.log('NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN1:', process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN1 ? 'Defined' : 'Undefined');
+console.log('Full Firebase Config:', firebaseConfig);
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
