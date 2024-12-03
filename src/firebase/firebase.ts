@@ -13,7 +13,8 @@ const firebaseConfig = {
 
 console.log('Firebase Config:', {
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID1,
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY1
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY1,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN1
 });
 
 // Initialize Firebase
