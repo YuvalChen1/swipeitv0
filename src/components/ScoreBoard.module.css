@@ -1,0 +1,270 @@
+.container {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #2563eb, #0d9488, #22c55e);
+  padding: 0.5rem 1rem;
+  overflow: hidden;
+  color: white;
+}
+
+.scoreboardCard {
+  position: relative;
+  background-color: rgba(17, 24, 39, 0.7);
+  backdrop-filter: blur(8px);
+  border-radius: 1.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  padding: 0.75rem 1.5rem;
+  max-width: 42rem;
+  width: 100%;
+  height: 95vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.contentWrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin-top: 3rem;
+}
+
+.backButton {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  padding: 0.5rem;
+  border-radius: 9999px;
+  background-color: rgba(55, 65, 81, 0.8);
+  color: rgb(209, 213, 219);
+  transition: all 0.2s;
+  z-index: 50;
+}
+
+.backButton:hover {
+  background-color: rgba(75, 85, 99, 0.8);
+}
+
+.title {
+  font-weight: bold;
+  text-align: center;
+  color: white;
+  margin-bottom: 1rem;
+  font-size: clamp(1rem, 4vw, 2.5rem);
+}
+
+.userStatsCard {
+  background-color: rgba(37, 99, 235, 0.5);
+  border-radius: 1rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.scoreItemContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.scoreLeftSection {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.rankContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(1.5rem, 6vw, 2rem);
+  flex-shrink: 0;
+}
+
+.rankIconFirst {
+  color: rgb(251, 191, 36);
+}
+
+.rankIconSecond {
+  color: rgb(209, 213, 219);
+}
+
+.rankIconThird {
+  color: rgb(251, 146, 60);
+}
+
+.playerInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.playerInfo h2 {
+  color: white;
+  font-size: clamp(0.75rem, 2.5vw, 1rem);
+  font-weight: bold;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.playerInfo p {
+  color: rgb(191, 219, 254);
+  font-size: clamp(0.65rem, 2vw, 0.75rem);
+}
+
+.score {
+  color: white;
+  font-size: clamp(0.875rem, 3vw, 1.25rem);
+  font-weight: bold;
+  min-width: clamp(3rem, 10vw, 4rem);
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.scoreList {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-right: 0.5rem;
+  min-height: 0;
+}
+
+.scoreItem {
+  padding: 0.625rem 0.875rem;
+  border-radius: 1rem;
+  transition: background-color 0.2s;
+  color: white;
+}
+
+.currentUser {
+  background-color: rgba(37, 99, 235, 0.5);
+}
+
+.otherUser {
+  background-color: rgba(31, 41, 55, 0.5);
+}
+
+.scoreItem:hover {
+  background-color: rgba(55, 65, 81, 0.7);
+}
+
+.rankNumber {
+  width: clamp(1.5rem, 6vw, 2rem);
+  height: clamp(1.5rem, 6vw, 2rem);
+  border-radius: 9999px;
+  background-color: rgba(55, 65, 81, 0.8);
+  color: rgb(209, 213, 219);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(0.75rem, 2.5vw, 0.875rem);
+  flex-shrink: 0;
+}
+
+.userStatsCard .rankNumber {
+  background-color: rgb(59, 130, 246);
+  color: white;
+}
+
+.playerName {
+  color: rgb(229, 231, 235);
+  font-size: clamp(0.75rem, 2.5vw, 0.95rem);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1;
+}
+
+.scoreValue {
+  color: rgb(147, 197, 253);
+  font-size: clamp(0.875rem, 3vw, 1.125rem);
+  font-weight: bold;
+  min-width: clamp(3rem, 10vw, 4rem);
+  text-align: right;
+  flex-shrink: 0;
+  margin-left: 0.5rem;
+}
+
+@media (max-width: 320px) {
+  .scoreboardCard {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .scoreItem {
+    padding: 0.5rem 0.625rem;
+  }
+  
+  .scoreLeftSection {
+    gap: 0.5rem;
+  }
+}
+
+.nameDisplay {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nameEditContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nameInput {
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.375rem;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  outline: none;
+  width: 150px;
+}
+
+.nameInput:focus {
+  border-color: rgba(59, 130, 246, 0.5);
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.editButton,
+.cancelButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border-radius: 0.375rem;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  transition: all 0.2s;
+}
+
+.editButton {
+  color: rgb(147, 197, 253);
+}
+
+.editButton:hover {
+  background-color: rgba(59, 130, 246, 0.3);
+}
+
+.cancelButton {
+  color: rgb(252, 165, 165);
+}
+
+.cancelButton:hover {
+  background-color: rgba(239, 68, 68, 0.3);
+} 

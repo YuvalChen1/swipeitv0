@@ -27,10 +27,12 @@
   }
   
   .gameArea {
+    padding-top: 40px;
+    padding-top: var(--game-area-padding, 40px);
     width: 100%;
     height: 100%;
-    overflow: hidden;
     position: relative;
+    overflow: hidden;
   }
   
   .block {
@@ -654,4 +656,10 @@
       transform: translate(var(--tx), var(--ty)) scale(0);
       opacity: 0;
     }
+  }
+  
+  .firstTap {
+    opacity: 0.8;
+    transform: scale(0.95);
+    transition: all 0.15s ease-out;
   }

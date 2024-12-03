@@ -13,9 +13,9 @@ import {
   X,
   Heart,
   CircleDollarSign,
-  Trophy,
-  Clock,
 } from "lucide-react";
+import GameHeader from '@/components/GameHeader';
+import GameOver from '@/components/GameOver';
 
 // Add a scoring constant at the top of the component
 const SCORE_VALUES = {
@@ -51,6 +51,11 @@ export default function Game() {
   const [lives, setLives] = useState(0);
   const [processingBlocks, setProcessingBlocks] = useState<Set<string>>(new Set());
   const shouldStopTimer = useRef(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Add this function at the top of your component to calculate block width
   const getBlockDimensions = () => {
@@ -235,13 +240,13 @@ export default function Game() {
   }, [gameOver, blocks]);
 
   const getBlockCount = (score: number) => {
-    if (score >= 100) return 9;
-    if (score >= 75) return 7;
-    if (score >= 60) return 6;
-    if (score >= 50) return 5;
-    if (score >= 40) return 4;
-    if (score >= 25) return 3;
-    if (score >= 10) return 2;
+    if (score >= 1000) return 9;
+    if (score >= 750) return 7;
+    if (score >= 600) return 6;
+    if (score >= 500) return 5;
+    if (score >= 400) return 4;
+    if (score >= 250) return 3;
+    if (score >= 100) return 2;
     return 1;
   };
 
@@ -334,7 +339,19 @@ export default function Game() {
       // Create all blocks at once with their fixed positions
       const newBlocks = positions.map((position, index) => {
         const actions = Object.values(BlockAction);
-        const action = actions[Math.floor(Math.random() * actions.length)];
+        
+        // Determine block action with rarity
+        let action: BlockAction;
+        const randomValue = Math.random();
+        if (randomValue < 1 / 250) {
+          action = BlockAction.EXTRA_LIFE; // 1/250 chance for heart
+        } else if (randomValue < 1 / 50) {
+          action = BlockAction.COINS; // 1/50 chance for coins
+        } else {
+          // Randomly select from other actions
+          const filteredActions = actions.filter(a => a !== BlockAction.EXTRA_LIFE && a !== BlockAction.COINS);
+          action = filteredActions[Math.floor(Math.random() * filteredActions.length)];
+        }
         
         return {
           id: Math.random().toString(36).substr(2, 9),
@@ -653,58 +670,27 @@ export default function Game() {
 
   if (gameOver) {
     return (
-      <div className={styles.gameOver}>
-        <h1>Game Over!</h1>
-        <p>Final Score: {score}</p>
-        <button onClick={() => {
+      <GameOver 
+        score={score} 
+        onRestart={() => {
           setScore(0);
           setTimer(6.0);
           setGameOver(false);
           setBlocks([]);
           shouldStopTimer.current = false;
-        }}>Play Again</button>
-      </div>
+        }} 
+      />
     );
   }
 
   return (
     <div className={styles.container}>
-      <header className={styles.header} style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '0.75rem',
-        height: `${getBlockDimensions().headerHeight}px`,
-        backgroundColor: 'rgb(17, 24, 39)', // bg-gray-900
-        backdropFilter: 'blur(8px)',
-        color: 'white',
-        zIndex: 1000
-      }}>
-        <div className={styles.scoreContainer}>
-          <Trophy size={24} color="#FCD34D" /> {/* text-yellow-300 */}
-          <span className={styles.score}>
-            {score}
-          </span>
-        </div>
-
-        <div className={styles.livesContainer}>
-          <Heart size={24} color="#EF4444" fill="#EF4444" />
-          <span className={styles.lives}>
-            {lives}
-          </span>
-        </div>
-
-        <div className={styles.timerContainer}>
-          <Clock size={24} color="#86EFAC" />
-          <span className={styles.timer}>
-            {Math.max(0, timer).toFixed(1)}s
-          </span>
-        </div>
-      </header>
+      <GameHeader 
+        score={score}
+        lives={lives}
+        timer={timer}
+        headerHeight={getBlockDimensions().headerHeight}
+      />
       
       {bonusNotification.visible && (
         <div className={styles.bonusNotification}>
@@ -712,9 +698,12 @@ export default function Game() {
         </div>
       )}
       
-      <div className={styles.gameArea} style={{
-        paddingTop: `${getBlockDimensions().headerHeight}px`
-      }}>
+      <div 
+        className={styles.gameArea} 
+        style={mounted ? {
+          '--game-area-padding': `${getBlockDimensions().headerHeight}px`
+        } as React.CSSProperties : undefined}
+      >
         {blocks.map((block) => (
           <div
             key={block.id}
