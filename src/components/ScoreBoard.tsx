@@ -181,13 +181,13 @@ export default function ScoreBoard({ onBack = () => {}, currentScore = 0 }) {
                         onClick={handleNameSubmit}
                         className={styles.editButton}
                       >
-                        <Check size={16} />
+                        <Check size={14} />
                       </button>
                       <button 
                         onClick={() => setIsEditingName(false)}
                         className={styles.cancelButton}
                       >
-                        <X size={16} />
+                        <X size={14} />
                       </button>
                     </div>
                   ) : (
@@ -196,8 +196,9 @@ export default function ScoreBoard({ onBack = () => {}, currentScore = 0 }) {
                       <button 
                         onClick={() => setIsEditingName(true)}
                         className={styles.editButton}
+                        title="Edit name"
                       >
-                        <Edit2 size={16} />
+                        <Edit2 size={14} />
                       </button>
                     </div>
                   )}
